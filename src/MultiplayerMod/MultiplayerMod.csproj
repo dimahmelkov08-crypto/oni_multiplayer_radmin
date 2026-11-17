@@ -50,7 +50,6 @@
         <Reference Include="0Harmony" HintPath="lib\exposed\0Harmony.dll" Private="false" />
     </ItemGroup>
     <ItemGroup>
-        <Reference Include="com.rlabrecque.steamworks.net" HintPath="$(ManagedPath)\com.rlabrecque.steamworks.net.dll" Private="false" />
         <Reference Include="UnityEngine" HintPath="$(ManagedPath)\UnityEngine.dll" Private="false" />
         <Reference Include="Unity.TextMeshPro" HintPath="$(ManagedPath)\Unity.TextMeshPro.dll" Private="false" />
         <Reference Include="UnityEngine.ImageConversionModule" HintPath="$(ManagedPath)\UnityEngine.ImageConversionModule.dll" Private="false" />

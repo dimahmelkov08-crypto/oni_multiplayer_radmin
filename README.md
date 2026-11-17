@@ -1,3 +1,13 @@
+# oni_multiplayer (IP / Radmin edition)
+
+Fork of [onimp/oni_multiplayer](https://github.com/onimp/oni_multiplayer) v1.1.3-alpha (MIT, see LICENSE).
+Changes: the Steam transport (lobby, P2P sockets, friends overlay) is replaced by plain TCP.
+Host listens on port 7777; the client enters `IP:port` (LAN, Radmin VPN, ZeroTier). Also fixes API drift vs. the current ONI build.
+Only the transport layer is new (`src/MultiplayerMod/Platform/Tcp`); all game synchronization is upstream code.
+Security: messages are .NET BinaryFormatter-serialized (as upstream) - only play with people you trust.
+
+---
+
 # ONI multiplayer mod (WORK IN PROGRESS / PROTOTYPE)
 
 This is a mod which adds multiplayer support to Oxygen not included game.
