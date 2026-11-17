@@ -52,7 +52,16 @@ public class DelayedModLoader {
         .NotNull()
         .Where(it => it.containerAttributes != null)
         .OrderByDescending(it => it.containerAttributes.priority)
-        .ForEach(it => it.Patch());
+        .ForEach(TryPatch);
+
+    // A patch broken by a game update must disable only its own feature, never crash the whole game.
+    private void TryPatch(PatchClassProcessor processor) {
+        try {
+            processor.Patch();
+        } catch (Exception exception) {
+            log.Error($"A patch failed and was skipped: {exception}");
+        }
+    }
 
     private PatchClassProcessor? TryCreateClassProcessor(Type type) {
         var optional = type.GetCustomAttribute<HarmonyOptionalAttribute>() != null;

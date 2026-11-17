@@ -39,7 +39,7 @@ public class TcpMultiplayerClient : IMultiplayerClient {
     public void Connect(IMultiplayerEndpoint endpoint) {
         var tcpEndpoint = (TcpEndpoint) endpoint;
         if (State is MultiplayerClientState.Connecting or MultiplayerClientState.Connected)
-            Cleanup();
+            ReleaseResources();
 
         connectedSocket = null;
         connectError = null;
@@ -55,7 +55,7 @@ public class TcpMultiplayerClient : IMultiplayerClient {
         if (State == MultiplayerClientState.Disconnected)
             throw new NetworkPlatformException("Client not connected");
 
-        Cleanup();
+        ReleaseResources();
         SetState(MultiplayerClientState.Disconnected);
     }
 
@@ -103,7 +103,7 @@ public class TcpMultiplayerClient : IMultiplayerClient {
         var error = connectError;
         if (error != null) {
             log.Error($"Connection failed: {error}");
-            Cleanup();
+            ReleaseResources();
             SetState(MultiplayerClientState.Error);
             return;
         }
@@ -137,12 +137,12 @@ public class TcpMultiplayerClient : IMultiplayerClient {
 
         if (connection.Closed) {
             log.Warning("Connection to the host was lost");
-            Cleanup();
+            ReleaseResources();
             SetState(MultiplayerClientState.Disconnected);
         }
     }
 
-    private void Cleanup() {
+    private void ReleaseResources() {
         Interlocked.Increment(ref connectAttempt);
         if (gameObject != null) {
             UnityObject.Destroy(gameObject);
