@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Game.Context;
 using MultiplayerMod.Game.UI.Tools.Context;
@@ -31,10 +32,22 @@ public abstract class AbstractDragToolCommand<T> : MultiplayerCommand where T : 
         if (tool is not FilteredDragTool filteredTool)
             return;
 
-        filteredTool.currentFilterTargets = new Dictionary<string, ToolParameterMenu.ToggleState> {
-            [ToolParameterMenu.FILTERLAYERS.ALL] = ToolParameterMenu.ToggleState.Off
-        };
-        Arguments.Parameters?.ForEach(it => filteredTool.currentFilterTargets[it] = ToolParameterMenu.ToggleState.On);
+        var active = new HashSet<string>(Arguments.Parameters ?? System.Array.Empty<string>());
+        filteredTool.currentFilters = new[] {
+            ToolParameterMenu.FILTERLAYERS.ALL,
+            ToolParameterMenu.FILTERLAYERS.WIRES,
+            ToolParameterMenu.FILTERLAYERS.LIQUIDCONDUIT,
+            ToolParameterMenu.FILTERLAYERS.GASCONDUIT,
+            ToolParameterMenu.FILTERLAYERS.SOLIDCONDUIT,
+            ToolParameterMenu.FILTERLAYERS.BUILDINGS,
+            ToolParameterMenu.FILTERLAYERS.BACKWALL,
+            ToolParameterMenu.FILTERLAYERS.LOGIC
+        }.Select(
+            name => new ToolParameterMenu.ToggleData(
+                name,
+                active.Contains(name) ? ToolParameterMenu.ToggleState.On : ToolParameterMenu.ToggleState.Off
+            )
+        ).ToArray();
     }
 
     protected virtual void InvokeTool(T tool) => Arguments.Cells.ForEach(it => tool.OnDragTool(it, 0));

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Game.UI.Tools.Events;
 
@@ -12,11 +13,14 @@ public class Harvest : AbstractDragToolCommand<HarvestTool> {
 
     protected override void InitializeTool(HarvestTool tool) {
         base.InitializeTool(tool);
-        tool.options = new Dictionary<string, ToolParameterMenu.ToggleState> {
-            ["HARVEST_WHEN_READY"] = ToolParameterMenu.ToggleState.Off,
-            ["DO_NOT_HARVEST"] = ToolParameterMenu.ToggleState.Off
-        };
-        Arguments.Parameters?.ForEach(it => tool.options[it] = ToolParameterMenu.ToggleState.On);
+        var active = new HashSet<string>(Arguments.Parameters ?? System.Array.Empty<string>());
+        tool.options = new[] { "HARVEST_WHEN_READY", "DO_NOT_HARVEST" }
+            .Select(
+                name => new ToolParameterMenu.ToggleData(
+                    name,
+                    active.Contains(name) ? ToolParameterMenu.ToggleState.On : ToolParameterMenu.ToggleState.Off
+                )
+            ).ToArray();
     }
 
 }
