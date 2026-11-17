@@ -35,7 +35,7 @@ public class MultiplayerServerController {
         if (@event.Multiplayer.Mode != MultiplayerMode.Host)
             return;
 
-        MultiplayerStatusOverlay.Show("Starting host...");
+        MultiplayerStatusOverlay.Show("Запуск хоста...");
         events.Subscribe<PlayersReadyEvent>(
             (_, subscription) => {
                 MultiplayerStatusOverlay.Close();

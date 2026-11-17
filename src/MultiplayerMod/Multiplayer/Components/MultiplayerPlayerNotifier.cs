@@ -32,8 +32,8 @@ public class MultiplayerPlayerNotifier : MultiplayerMonoBehaviour {
 
     private void OnPlayerLeft(PlayerLeftEvent @event) {
         var playerName = @event.Player.Profile.PlayerName;
-        var message = $"{playerName} left";
-        var description = $"{playerName} {(@event.Gracefully ? "left" : "disconnected")}";
+        var message = $"{playerName} вышел";
+        var description = $"{playerName} {(@event.Gracefully ? "вышел из игры" : "потерял соединение")}";
         AddNotification(message, description, NotificationType.BadMinor);
     }
 

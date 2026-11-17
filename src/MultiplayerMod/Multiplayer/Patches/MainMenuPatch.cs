@@ -17,17 +17,17 @@ internal static class MainMenuPatch {
     private static void OnPrefabInit(MainMenu __instance) {
         var operations = Dependencies.Get<IMultiplayerOperations>();
         __instance.AddButton(
-            "NEW MULTIPLAYER",
+            "НОВАЯ СЕТЕВАЯ ИГРА",
             highlight: true,
             () => UseMultiplayerMode(MultiplayerMode.Host, __instance.NewGame)
         );
         __instance.AddButton(
-            "LOAD MULTIPLAYER",
+            "ЗАГРУЗИТЬ СЕТЕВУЮ ИГРУ",
             highlight: false,
             () => UseMultiplayerMode(MultiplayerMode.Host, __instance.LoadGame)
         );
         __instance.AddButton(
-            "JOIN MULTIPLAYER",
+            "ПОДКЛЮЧИТЬСЯ К ИГРЕ",
             highlight: false,
             () => UseMultiplayerMode(MultiplayerMode.Client, operations.Join)
         );

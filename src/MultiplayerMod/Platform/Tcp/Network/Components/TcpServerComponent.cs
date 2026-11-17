@@ -26,7 +26,7 @@ public class TcpServerComponent : MultiplayerMonoBehaviour {
 
     // Small always-visible hint for the host: which address should friends use.
     private void OnGUI() {
-        var text = $"Hosting on port {server.Port}. Friends connect to: {addresses}";
+        var text = $"Хост на порту {server.Port}. Друзьям подключаться к: {addresses}";
         var width = 620f;
         GUI.Box(new Rect((Screen.width - width) / 2, 2, width, 22), text);
     }
@@ -46,7 +46,7 @@ public class TcpServerComponent : MultiplayerMonoBehaviour {
             }
         }
         var all = radmin.Select(it => it + " (Radmin)").Concat(others).ToList();
-        return all.Count == 0 ? "unknown" : string.Join(", ", all);
+        return all.Count == 0 ? "неизвестно" : string.Join(", ", all);
     }
 
 }

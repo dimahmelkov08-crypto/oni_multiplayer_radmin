@@ -7,7 +7,7 @@ public class MultiplayerColonyDiagnostic : ColonyDiagnostic {
     public MultiplayerColonyDiagnostic(int worldId) : base(worldId, "Multiplayer errors") {
         icon = "icon_errand_operate";
         tracker = TrackerTool.Instance.GetWorldTracker<MultiplayerErrorsTracker>(worldId);
-        AddCriterion("CheckSyncErrors", new DiagnosticCriterion("Check sync errors", CheckSyncErrorsCount));
+        AddCriterion("CheckSyncErrors", new DiagnosticCriterion("Ошибки синхронизации", CheckSyncErrorsCount));
     }
 
     private DiagnosticResult CheckSyncErrorsCount() {

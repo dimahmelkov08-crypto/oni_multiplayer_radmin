@@ -8,7 +8,7 @@ namespace MultiplayerMod.Multiplayer.Commands.World;
 public class NotifyWorldSavePreparing : MultiplayerCommand {
 
     public override void Execute(MultiplayerCommandContext context) {
-        MultiplayerStatusOverlay.Show("Waiting for the world...");
+        MultiplayerStatusOverlay.Show("Ожидание мира...");
     }
 
 }

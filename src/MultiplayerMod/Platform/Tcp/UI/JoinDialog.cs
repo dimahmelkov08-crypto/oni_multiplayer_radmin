@@ -22,18 +22,18 @@ public class JoinDialog : MonoBehaviour {
     }
 
     private void OnGUI() {
-        window = GUI.Window(0x4F4E49, window, Draw, "Join multiplayer (host IP:port, e.g. Radmin address)");
+        window = GUI.Window(0x4F4E49, window, Draw, "Подключение к игре (IP:порт хоста, например адрес Radmin)");
     }
 
     private void Draw(int id) {
-        GUILayout.Label("Host address:");
+        GUILayout.Label("Адрес хоста:");
         address = GUILayout.TextField(address);
         if (error.Length > 0)
             GUILayout.Label(error);
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Connect"))
+        if (GUILayout.Button("Подключиться"))
             Connect();
-        if (GUILayout.Button("Cancel"))
+        if (GUILayout.Button("Отмена"))
             Destroy(gameObject);
         GUILayout.EndHorizontal();
         GUI.DragWindow();
@@ -41,7 +41,7 @@ public class JoinDialog : MonoBehaviour {
 
     private void Connect() {
         if (!TryParse(address.Trim(), out var host, out var port)) {
-            error = "Enter an address like 26.1.2.3:7777";
+            error = "Введите адрес вида 26.1.2.3:7777";
             return;
         }
         PlayerPrefs.SetString(prefsKey, address.Trim());

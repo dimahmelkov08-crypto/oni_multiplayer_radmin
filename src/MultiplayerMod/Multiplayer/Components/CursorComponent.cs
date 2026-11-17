@@ -121,7 +121,7 @@ public class CursorComponent : MultiplayerKMonoBehaviour {
         var screenUnderCursor = FindScreenUnderCursor(transform.position);
         var showScreenName = screenUnderCursor?.GetType() != screenType;
 
-        cursorText.text = playerName + (showScreenName ? $" ({screenName ?? "World"})" : "");
+        cursorText.text = playerName + (showScreenName ? $" ({screenName ?? "Мир"})" : "");
         cursorImage.color = cursorText.color = showScreenName ? new Color(1, 1, 1, 0.5f) : Color.white;
     }
 

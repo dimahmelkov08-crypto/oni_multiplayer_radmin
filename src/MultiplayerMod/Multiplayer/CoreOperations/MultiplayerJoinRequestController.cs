@@ -23,7 +23,7 @@ public class MultiplayerJoinRequestController {
 
     private void OnMultiplayerJoinRequested(MultiplayerJoinRequestedEvent @event) {
         events.Dispatch(new MultiplayerModeSelectedEvent(MultiplayerMode.Client));
-        MultiplayerStatusOverlay.Show($"Connecting to {@event.HostName}...");
+        MultiplayerStatusOverlay.Show($"Подключение к {@event.HostName}...");
         client.Connect(@event.Endpoint);
     }
 

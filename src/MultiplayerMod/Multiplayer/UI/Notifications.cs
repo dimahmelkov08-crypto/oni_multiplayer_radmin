@@ -18,7 +18,7 @@ public class Notifications {
             GameScreenManager.Instance.ssOverlayCanvas.gameObject
         );
         screen.SetHeader("Multiplayer");
-        screen.AddPlainText("Connection has been lost. Further play can not be synced");
+        screen.AddPlainText("Соединение потеряно. Дальнейшая игра не будет синхронизироваться");
         screen.AddOption(
             "OK",
             _ => PauseScreen.Instance.OnQuitConfirm(true)
