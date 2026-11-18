@@ -19,6 +19,7 @@ public class JoinDialog : MonoBehaviour {
         address = PlayerPrefs.GetString(prefsKey, "26.0.0.1:" + Configuration.DefaultPort);
         window.x = (Screen.width - window.width) / 2;
         window.y = (Screen.height - window.height) / 2;
+        Debug.Log("[MP-Radmin] Join dialog opened");
     }
 
     private void OnGUI() {
@@ -31,7 +32,9 @@ public class JoinDialog : MonoBehaviour {
         if (error.Length > 0)
             GUILayout.Label(error);
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Подключиться"))
+        var enter = Event.current.type == EventType.KeyDown &&
+                    (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter);
+        if (GUILayout.Button("Подключиться") || enter)
             Connect();
         if (GUILayout.Button("Отмена"))
             Destroy(gameObject);
@@ -40,12 +43,23 @@ public class JoinDialog : MonoBehaviour {
     }
 
     private void Connect() {
+        Debug.Log("[MP-Radmin] Connect clicked, address: " + address);
+        try {
+            ConnectInternal();
+        } catch (System.Exception exception) {
+            error = "Ошибка: " + exception.Message;
+            Debug.LogError("[MP-Radmin] Connect failed: " + exception);
+        }
+    }
+
+    private void ConnectInternal() {
         if (!TryParse(address.Trim(), out var host, out var port)) {
             error = "Введите адрес вида 26.1.2.3:7777";
             return;
         }
         PlayerPrefs.SetString(prefsKey, address.Trim());
         var endpoint = new TcpEndpoint(host, port);
+        Debug.Log($"[MP-Radmin] Dispatching join request to {host}:{port}");
         Dependencies.Get<EventDispatcher>().Dispatch(new MultiplayerJoinRequestedEvent(endpoint, host));
         Destroy(gameObject);
     }
