@@ -48,6 +48,8 @@ public class DelayedModLoader {
 
     private void PrioritizedPatch() => AccessTools.GetTypesFromAssembly(assembly)
         .Where(it => it != typeof(LaunchInitializerPatch))
+        // Disabled (FindNextChore no longer exists in the current game build); not real patches.
+        .Where(it => it.Name != "ChoreConsumerPatch" && it.Name != "ChoreConsumerEvents" || it.IsNested)
         .Select(TryCreateClassProcessor)
         .NotNull()
         .Where(it => it.containerAttributes != null)

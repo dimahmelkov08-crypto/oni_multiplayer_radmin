@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Platform.Tcp.Network.Messaging.Surrogates;
 using UnityEngine;
@@ -55,16 +56,26 @@ public class PatchTargetResolver {
             .SelectMany(
                 type => {
                     if (classTypes.Contains(type))
-                        return targets[type].Select(it => GetMethodOrSetter(type, it, null));
+                        return targets[type].Select(it => TryResolve(type, it, null)).NotNull();
 
                     var implementedInterfaces = GetImplementedInterfaces(interfaceTypes, type);
                     return implementedInterfaces.SelectMany(
                         implementedInterface => targets[implementedInterface].Select(
-                            it => GetMethodOrSetter(type, it, implementedInterface)
-                        )
+                            it => TryResolve(type, it, implementedInterface)
+                        ).NotNull()
                     );
                 }
             ).ToList();
+    }
+
+    // One target broken by a game update must only disable itself, not the whole patch group.
+    private MethodBase? TryResolve(Type type, MemberReference reference, Type? interfaceType) {
+        try {
+            return GetMethodOrSetter(type, reference, interfaceType);
+        } catch (Exception exception) {
+            log.Warning($"Patch target {type}.{reference.Name} skipped: {exception.Message}");
+            return null;
+        }
     }
 
     private MethodBase GetMethodOrSetter(Type type, MemberReference reference, Type? interfaceType) {
@@ -84,10 +95,22 @@ public class PatchTargetResolver {
         throw new Exception(message);
     }
 
+    private static MethodInfo? FindMethod(Type type, string name, Type[]? parameters) {
+        try {
+            return parameters == null
+                ? type.GetMethod(name, instanceBindingFlags)
+                : type.GetMethod(name, instanceBindingFlags, null, parameters, null);
+        } catch (AmbiguousMatchException) {
+            // Overloads exist: patch the one declared on this type with the fewest parameters.
+            return type.GetMethods(instanceBindingFlags | BindingFlags.DeclaredOnly)
+                .Where(it => it.Name == name)
+                .OrderBy(it => it.GetParameters().Length)
+                .FirstOrDefault();
+        }
+    }
+
     private MethodBase? GetMethod(Type type, MemberReference reference, Type? interfaceType) {
-        var methodInfo = reference.Parameters == null
-            ? type.GetMethod(reference.Name, instanceBindingFlags)
-            : type.GetMethod(reference.Name, instanceBindingFlags, null, reference.Parameters, null);
+        var methodInfo = FindMethod(type, reference.Name, reference.Parameters);
 
         if (methodInfo != null)
             return methodInfo;
@@ -96,9 +119,7 @@ public class PatchTargetResolver {
             return null;
 
         // Some overrides names prefixed by interface e.g. Clinic#ISliderControl.SetSliderValue
-        methodInfo = reference.Parameters == null
-            ? type.GetMethod(interfaceType.Name + "." + reference.Name, instanceBindingFlags)
-            : type.GetMethod(interfaceType.Name + "." + reference.Name, instanceBindingFlags, null, reference.Parameters, null);
+        methodInfo = FindMethod(type, interfaceType.Name + "." + reference.Name, reference.Parameters);
 
         return methodInfo;
     }

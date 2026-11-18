@@ -57,7 +57,7 @@ public class NetworkMessageProcessor {
     }
 
     private class FragmentsBuffer {
-        private const int watchdogIntervalMs = 5000;
+        private const int watchdogIntervalMs = 60000; // a world save over Radmin/VPN can take well over 5 s
 
         private int index;
         private readonly int count;
@@ -73,19 +73,26 @@ public class NetworkMessageProcessor {
         public FragmentsBuffer(int count) {
             this.count = count;
             buffer = new byte[count * MaxFragmentDataSize];
-            watchdog.Elapsed += (_, _) => Timeout?.Invoke();
+            watchdog.Elapsed += (_, _) => {
+                watchdog.Dispose();
+                Timeout?.Invoke();
+            };
         }
 
         public NetworkMessage? Append(NetworkMessageFragment fragment) {
             if (index >= count)
                 throw new NetworkPlatformException("Invalid fragmentation: more fragments than expected.");
 
-            watchdog.Interval = watchdogIntervalMs;
+            try {
+                watchdog.Interval = watchdogIntervalMs; // restart the timeout on every received fragment
+            } catch (ObjectDisposedException) {
+                throw new NetworkPlatformException("Fragments buffer already timed out.");
+            }
             Buffer.BlockCopy(fragment.Data, 0, buffer, index * MaxFragmentDataSize, fragment.Data.Length);
             if (++index != count)
                 return null;
 
-            watchdog.Enabled = false;
+            watchdog.Dispose();
             using var stream = new MemoryStream(buffer);
             return (NetworkMessage) new BinaryFormatter().Deserialize(stream);
         }
