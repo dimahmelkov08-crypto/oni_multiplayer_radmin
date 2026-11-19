@@ -1,7 +1,9 @@
-﻿using JetBrains.Annotations;
+﻿using System;
+using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
+using MultiplayerMod.Core.Scheduling;
 using MultiplayerMod.Game.Chores;
 using MultiplayerMod.Game.World;
 using MultiplayerMod.Multiplayer.Commands.Chores;
@@ -20,14 +22,24 @@ public class HostEventsBinder {
     private readonly IMultiplayerServer server;
     private readonly WorldManager worldManager;
     private readonly EventDispatcher eventDispatcher;
+    private readonly MultiplayerGame multiplayer;
+    private readonly UnityTaskScheduler scheduler;
 
-    // Forced full world resync (host sends the whole colony to clients) once per this many cycles
-    private const int SyncIntervalCycles = 5;
+    // Forced full world resync (host sends the whole colony to clients) once per this many cycles (host keeps playing, no overlay)
+    private const int SyncIntervalCycles = 1;
 
     private EventSubscriptions subscriptions = null!;
     private int lastSyncCycle;
 
-    public HostEventsBinder(IMultiplayerServer server, WorldManager worldManager, EventDispatcher eventDispatcher) {
+    public HostEventsBinder(
+        IMultiplayerServer server,
+        WorldManager worldManager,
+        EventDispatcher eventDispatcher,
+        MultiplayerGame multiplayer,
+        UnityTaskScheduler scheduler
+    ) {
+        this.multiplayer = multiplayer;
+        this.scheduler = scheduler;
         this.server = server;
         this.worldManager = worldManager;
         this.eventDispatcher = eventDispatcher;
@@ -63,7 +75,19 @@ public class HostEventsBinder {
             return;
 
         lastSyncCycle = cycle;
-        worldManager.Sync();
+        // Run on the main-thread scheduler, outside of the game clock callback
+        scheduler.Run(() => {
+            try {
+                // Nobody to sync with, or previous sync is still in progress
+                if (multiplayer.Players.Count < 2 || !multiplayer.Players.Ready)
+                    return;
+
+                worldManager.Sync(showOverlay: false);
+            } catch (Exception e) {
+                // A failed periodic sync must never crash or freeze the host's game
+                log.Error($"Periodic world sync failed: {e}");
+            }
+        });
     }
 
     private void OnStopMultiplayer(StopMultiplayerEvent @event) {

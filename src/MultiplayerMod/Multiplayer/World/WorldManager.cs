@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
@@ -42,8 +42,9 @@ public class WorldManager {
         this.executionLevelManager = executionLevelManager;
     }
 
-    public void Sync() {
-        SetupStatusOverlay();
+    public void Sync(bool showOverlay = true) {
+        if (showOverlay)
+            SetupStatusOverlay();
 
         var resume = !SpeedControlScreen.Instance.IsPaused;
         server.Send(new PauseGame());
