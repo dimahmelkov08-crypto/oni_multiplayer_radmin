@@ -1,11 +1,14 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Extensions;
 using MultiplayerMod.Core.Paths;
 using MultiplayerMod.Core.Scheduling;
+using MultiplayerMod.Game.World;
 using MultiplayerMod.ModRuntime.Context;
 using MultiplayerMod.ModRuntime.StaticCompatibility;
 using MultiplayerMod.Multiplayer.Commands.Speed;
@@ -20,6 +23,8 @@ namespace MultiplayerMod.Multiplayer.World;
 
 [Dependency, UsedImplicitly]
 public class WorldManager {
+
+    private const int ResumeTimeoutMs = 60000;
 
     private readonly IMultiplayerServer server;
     private readonly MultiplayerGame multiplayer;
@@ -54,8 +59,30 @@ public class WorldManager {
         server.Send(new NotifyWorldSavePreparing(), MultiplayerCommandOptions.SkipHost);
         server.Send(new LoadWorld(WorldName, GetWorldSave()), MultiplayerCommandOptions.SkipHost);
 
-        if (resume)
-            server.Send(new ResumeGame());
+        if (!resume)
+            return;
+
+        // The game stays paused until every player is Ready (see ResumeGame).
+        server.Send(new ResumeGame());
+        ScheduleStuckSyncRecovery();
+    }
+
+    // If a client never becomes Ready (dropped while loading), don't leave the host paused forever
+    private void ScheduleStuckSyncRecovery() {
+        Task.Delay(ResumeTimeoutMs).ContinueWith(
+            _ => scheduler.Run(() => {
+                try {
+                    if (multiplayer.Players.Ready)
+                        return;
+                    if (SpeedControlScreen.Instance != null && SpeedControlScreen.Instance.IsPaused)
+                        SpeedControlScreen.Instance.Unpause();
+                    MultiplayerStatusOverlay.Close();
+                } catch (Exception) {
+                    // never let recovery crash the game
+                }
+            }),
+            TaskScheduler.Default
+        );
     }
 
     private void SetupStatusOverlay() {
@@ -97,6 +124,7 @@ public class WorldManager {
             writer.Write(data);
 
         executionLevelManager.BaseLevel = ExecutionLevel.Multiplayer;
+        ModFootprintPatch.AllowForHostWorldLoad();
         LoadScreen.DoLoad(path);
     }
 

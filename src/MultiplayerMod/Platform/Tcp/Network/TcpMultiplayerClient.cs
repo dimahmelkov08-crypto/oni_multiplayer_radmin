@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Sockets;
 using System.Threading;
 using JetBrains.Annotations;
@@ -35,6 +35,8 @@ public class TcpMultiplayerClient : IMultiplayerClient {
     private volatile TcpClient? connectedSocket;
     private volatile string? connectError;
     private int connectAttempt;
+    private bool connectionWasLost;
+    private bool droppedWarningShown;
 
     public void Connect(IMultiplayerEndpoint endpoint) {
         var tcpEndpoint = (TcpEndpoint) endpoint;
@@ -43,6 +45,8 @@ public class TcpMultiplayerClient : IMultiplayerClient {
 
         connectedSocket = null;
         connectError = null;
+        connectionWasLost = false;
+        droppedWarningShown = false;
         var attempt = Interlocked.Increment(ref connectAttempt);
         SetState(MultiplayerClientState.Connecting);
         log.Info($"Connecting to {tcpEndpoint.Host}:{tcpEndpoint.Port}");
@@ -71,6 +75,15 @@ public class TcpMultiplayerClient : IMultiplayerClient {
     }
 
     public void Send(IMultiplayerCommand command, MultiplayerCommandOptions options = MultiplayerCommandOptions.None) {
+        if (State == MultiplayerClientState.Disconnected && connectionWasLost) {
+            // Connection dropped: game events (mouse, pause...) keep firing, drop them instead of throwing every frame
+            if (!droppedWarningShown) {
+                droppedWarningShown = true;
+                log.Warning("Not connected to the host, outgoing commands are being dropped");
+            }
+            return;
+        }
+
         if (State != MultiplayerClientState.Connected || connection == null)
             throw new NetworkPlatformException("Client not connected");
 
@@ -137,6 +150,7 @@ public class TcpMultiplayerClient : IMultiplayerClient {
 
         if (connection.Closed) {
             log.Warning("Connection to the host was lost");
+            connectionWasLost = true;
             ReleaseResources();
             SetState(MultiplayerClientState.Disconnected);
         }
