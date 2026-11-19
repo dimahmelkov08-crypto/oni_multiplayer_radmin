@@ -1,3 +1,3 @@
-title: "Multiplayer mod (IP / Radmin, no Steam)"
+title: "No Steam"
 description: "Play Oxygen Not Included together over IP (LAN, Radmin VPN, ZeroTier). Based on onimp/oni_multiplayer (MIT)."
 staticID: "multiplayerMod"
