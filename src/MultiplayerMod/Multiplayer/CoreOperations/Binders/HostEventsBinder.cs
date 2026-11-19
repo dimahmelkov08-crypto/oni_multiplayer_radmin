@@ -3,6 +3,7 @@ using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Core.Logging;
 using MultiplayerMod.Game.Chores;
+using MultiplayerMod.Game.World;
 using MultiplayerMod.Multiplayer.Commands.Chores;
 using MultiplayerMod.Multiplayer.Commands.Debug;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
@@ -20,7 +21,11 @@ public class HostEventsBinder {
     private readonly WorldManager worldManager;
     private readonly EventDispatcher eventDispatcher;
 
+    // Forced full world resync (host sends the whole colony to clients) once per this many cycles
+    private const int SyncIntervalCycles = 5;
+
     private EventSubscriptions subscriptions = null!;
+    private int lastSyncCycle;
 
     public HostEventsBinder(IMultiplayerServer server, WorldManager worldManager, EventDispatcher eventDispatcher) {
         this.server = server;
@@ -43,18 +48,29 @@ public class HostEventsBinder {
         if (@event.Multiplayer.Mode != MultiplayerMode.Host)
             return;
 
+        lastSyncCycle = GameClock.Instance.GetCycle();
+        GameClockEvents.CycleChanged += OnCycleChanged;
+
         subscriptions = new EventSubscriptions {
-            eventDispatcher.Subscribe<WorldSavedEvent>(_ => worldManager.Sync()),
             eventDispatcher.Subscribe<DebugSnapshotAvailableEvent>(
                 e => server.Send(new SyncWorldDebugSnapshot(e.Snapshot))
             )
         };
     }
 
+    private void OnCycleChanged(int cycle) {
+        if (cycle - lastSyncCycle < SyncIntervalCycles)
+            return;
+
+        lastSyncCycle = cycle;
+        worldManager.Sync();
+    }
+
     private void OnStopMultiplayer(StopMultiplayerEvent @event) {
         if (@event.Multiplayer.Mode != MultiplayerMode.Host)
             return;
 
+        GameClockEvents.CycleChanged -= OnCycleChanged;
         subscriptions.Cancel();
     }
 
