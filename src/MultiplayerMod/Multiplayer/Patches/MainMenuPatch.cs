@@ -15,6 +15,7 @@ internal static class MainMenuPatch {
     [HarmonyPatch("OnPrefabInit")]
     [UsedImplicitly]
     private static void OnPrefabInit(MainMenu __instance) {
+        MultiplayerMod.Game.UI.CreditLabel.Ensure();
         var operations = Dependencies.Get<IMultiplayerOperations>();
         __instance.AddButton(
             "НОВАЯ СЕТЕВАЯ ИГРА",

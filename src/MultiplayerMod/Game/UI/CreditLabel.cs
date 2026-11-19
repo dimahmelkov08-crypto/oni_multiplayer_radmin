@@ -27,7 +27,7 @@ public static class CreditLabelPatch {
 /// </summary>
 public static class CreditLabel {
 
-    private const string Version = "Версия 1.9AAB";
+    private const string Version = "IM_4ORTTICK  |  версия 2.0";
 
     private static readonly Core.Logging.Logger log = LoggerFactory.GetLogger(typeof(CreditLabel));
     private static GameObject? root;
@@ -75,7 +75,7 @@ public static class CreditLabel {
         rect.sizeDelta = new Vector2(0, size + 8);
 
         var text = textObject.AddComponent<TextMeshProUGUI>();
-        text.font = Localization.FontAsset;
+        text.font = Localization.FontAsset ?? TMP_Settings.defaultFontAsset;
         text.fontSize = size;
         text.alignment = alignment;
         text.color = color;
