@@ -24,7 +24,7 @@ internal static class MainMenuPatch {
         __instance.AddButton(
             "ЗАГРУЗИТЬ СЕТЕВУЮ ИГРУ",
             highlight: false,
-            () => UseMultiplayerMode(MultiplayerMode.Host, __instance.LoadGame)
+            () => UseMultiplayerMode(MultiplayerMode.Host, () => LoadLatestSave(__instance))
         );
         __instance.AddButton(
             "ПОДКЛЮЧИТЬСЯ К ИГРЕ",
@@ -48,6 +48,24 @@ internal static class MainMenuPatch {
     [HarmonyPatch(nameof(MainMenu.ResumeGame))]
     [UsedImplicitly]
     private static void ResumeGame() => DisableMultiplayer();
+
+    // Hosting a loaded game: skip the save list and load the newest save (manual or autosave) right away
+    private static void LoadLatestSave(MainMenu menu) {
+        string? latest = null;
+        try {
+            latest = SaveLoader.GetLatestSaveForCurrentDLC();
+        } catch (System.Exception) {
+            // fall back to the regular load screen
+        }
+
+        if (string.IsNullOrEmpty(latest)) {
+            menu.LoadGame();
+            return;
+        }
+
+        SaveLoader.SetActiveSaveFilePath(latest);
+        LoadScreen.DoLoad(latest);
+    }
 
     private static bool Is(this MainMenu.ButtonInfo info, LocString loc) => info.text.key.String == loc.key.String;
 

@@ -1,4 +1,4 @@
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
 using MultiplayerMod.Multiplayer.CoreOperations.Events;
@@ -13,6 +13,10 @@ public class Notifications {
     }
 
     private void OnConnectionLost(ConnectionLostEvent @event) {
+        // Connection failed before a game was loaded (main menu): there are no in-game screens to show the dialog on
+        if (GameScreenManager.Instance == null || ScreenPrefabs.Instance == null || PauseScreen.Instance == null)
+            return;
+
         var screen = (InfoDialogScreen) GameScreenManager.Instance.StartScreen(
             ScreenPrefabs.Instance.InfoDialogScreen.gameObject,
             GameScreenManager.Instance.ssOverlayCanvas.gameObject

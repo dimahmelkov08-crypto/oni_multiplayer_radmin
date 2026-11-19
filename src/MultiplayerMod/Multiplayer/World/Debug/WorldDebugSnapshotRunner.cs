@@ -19,6 +19,8 @@ public class WorldDebugSnapshotRunner : MultiplayerKMonoBehaviour, IRenderEveryT
 
     public static int ErrorsCount { get; private set; }
 
+    public static void ResetErrors() => ErrorsCount = 0;
+
     public void RenderEveryTick(float dt) {
         if (GameClock.Instance.GetTime() - lastTime < checkPeriod)
             return;

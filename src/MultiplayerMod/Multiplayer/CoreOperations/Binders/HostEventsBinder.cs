@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using MultiplayerMod.Core.Dependency;
 using MultiplayerMod.Core.Events;
@@ -62,6 +63,7 @@ public class HostEventsBinder {
 
         lastSyncCycle = GameClock.Instance.GetCycle();
         GameClockEvents.CycleChanged += OnCycleChanged;
+        AutoSaveEvents.AutoSaved += OnAutoSaved;
 
         subscriptions = new EventSubscriptions {
             eventDispatcher.Subscribe<DebugSnapshotAvailableEvent>(
@@ -70,24 +72,65 @@ public class HostEventsBinder {
         };
     }
 
+    private const int AutoSaveWaitMs = 5000;
+
+    private bool syncPending;
+    private int pendingToken;
+
+    // End of the cycle: wait for the game's autosave and sync exactly that file.
+    // If it doesn't show up, trigger the autosave ourselves; as the last resort sync a fresh save.
     private void OnCycleChanged(int cycle) {
         if (cycle - lastSyncCycle < SyncIntervalCycles)
             return;
 
         lastSyncCycle = cycle;
-        // Run on the main-thread scheduler, outside of the game clock callback
-        scheduler.Run(() => {
-            try {
-                // Nobody to sync with, or previous sync is still in progress
-                if (multiplayer.Players.Count < 2 || !multiplayer.Players.Ready)
-                    return;
+        var token = ++pendingToken;
+        syncPending = true;
 
-                worldManager.Sync(showOverlay: false);
-            } catch (Exception e) {
-                // A failed periodic sync must never crash or freeze the host's game
-                log.Error($"Periodic world sync failed: {e}");
-            }
-        });
+        Task.Delay(AutoSaveWaitMs).ContinueWith(
+            _ => scheduler.Run(() => {
+                if (!syncPending || token != pendingToken)
+                    return;
+                try {
+                    GameClock.Instance.DoAutoSave(cycle);
+                } catch (Exception e) {
+                    log.Warning($"Unable to trigger autosave: {e.Message}");
+                }
+
+                Task.Delay(AutoSaveWaitMs).ContinueWith(
+                    __ => scheduler.Run(() => {
+                        if (!syncPending || token != pendingToken)
+                            return;
+                        syncPending = false;
+                        RunSync(null);
+                    }),
+                    TaskScheduler.Default
+                );
+            }),
+            TaskScheduler.Default
+        );
+    }
+
+    private void OnAutoSaved(string path) {
+        if (!syncPending)
+            return;
+
+        syncPending = false;
+        // Not inside SaveLoader.Save: sync on the next tick
+        scheduler.Run(() => RunSync(path));
+    }
+
+    private void RunSync(string? savePath) {
+        try {
+            // Nobody to sync with, or previous sync is still in progress
+            if (multiplayer.Players.Count < 2 || !multiplayer.Players.Ready)
+                return;
+
+            worldManager.Sync(showOverlay: false, savePath);
+        } catch (Exception e) {
+            // A failed periodic sync must never crash or freeze the host's game
+            log.Error($"Periodic world sync failed: {e}");
+        }
     }
 
     private void OnStopMultiplayer(StopMultiplayerEvent @event) {
@@ -95,6 +138,8 @@ public class HostEventsBinder {
             return;
 
         GameClockEvents.CycleChanged -= OnCycleChanged;
+        AutoSaveEvents.AutoSaved -= OnAutoSaved;
+        syncPending = false;
         subscriptions.Cancel();
     }
 
