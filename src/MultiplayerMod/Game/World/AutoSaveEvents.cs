@@ -1,19 +1,24 @@
 using HarmonyLib;
+using UnityEngine;
 
 namespace MultiplayerMod.Game.World;
 
-/// <summary>Raised after the game has written an autosave (path of the written file).</summary>
+/// <summary>Remembers the last autosave the game has written (path and real time).</summary>
 [HarmonyPatch(typeof(SaveLoader))]
 public static class AutoSaveEvents {
 
-    public static event System.Action<string>? AutoSaved;
+    public static string? LastPath { get; private set; }
+    public static float LastTime { get; private set; } = -1000f;
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(SaveLoader.Save), typeof(string), typeof(bool), typeof(bool))]
     // ReSharper disable once UnusedMember.Global
     public static void SavePostfix(string filename, bool isAutoSave) {
-        if (isAutoSave)
-            AutoSaved?.Invoke(filename);
+        if (!isAutoSave)
+            return;
+
+        LastPath = filename;
+        LastTime = Time.realtimeSinceStartup;
     }
 
 }

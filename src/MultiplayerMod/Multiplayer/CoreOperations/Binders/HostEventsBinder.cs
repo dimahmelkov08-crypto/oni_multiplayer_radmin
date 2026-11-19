@@ -63,7 +63,6 @@ public class HostEventsBinder {
 
         lastSyncCycle = GameClock.Instance.GetCycle();
         GameClockEvents.CycleChanged += OnCycleChanged;
-        AutoSaveEvents.AutoSaved += OnAutoSaved;
 
         subscriptions = new EventSubscriptions {
             eventDispatcher.Subscribe<DebugSnapshotAvailableEvent>(
@@ -72,52 +71,48 @@ public class HostEventsBinder {
         };
     }
 
-    private const int AutoSaveWaitMs = 5000;
-
-    private bool syncPending;
     private int pendingToken;
 
-    // End of the cycle: wait for the game's autosave and sync exactly that file.
-    // If it doesn't show up, trigger the autosave ourselves; as the last resort sync a fresh save.
+    // End of the cycle: take the autosave the game has just written and sync exactly that file.
+    // The game's own autosave may land slightly before or after we notice the new cycle, so look back a few seconds.
+    // If no autosave shows up, sync a fresh save instead.
     private void OnCycleChanged(int cycle) {
         if (cycle - lastSyncCycle < SyncIntervalCycles)
             return;
 
         lastSyncCycle = cycle;
-        var token = ++pendingToken;
-        syncPending = true;
+        WaitForAutoSave(++pendingToken, UnityEngine.Time.realtimeSinceStartup, 0);
+    }
 
-        Task.Delay(AutoSaveWaitMs).ContinueWith(
+    private void WaitForAutoSave(int token, float changedAt, int attempt) {
+        Task.Delay(attempt == 0 ? 2000 : 4000).ContinueWith(
             _ => scheduler.Run(() => {
-                if (!syncPending || token != pendingToken)
+                if (token != pendingToken)
                     return;
-                try {
-                    GameClock.Instance.DoAutoSave(cycle);
-                } catch (Exception e) {
-                    log.Warning($"Unable to trigger autosave: {e.Message}");
+
+                var path = FindFreshAutoSave(changedAt);
+                if (path != null) {
+                    RunSync(path);
+                    return;
                 }
 
-                Task.Delay(AutoSaveWaitMs).ContinueWith(
-                    __ => scheduler.Run(() => {
-                        if (!syncPending || token != pendingToken)
-                            return;
-                        syncPending = false;
-                        RunSync(null);
-                    }),
-                    TaskScheduler.Default
-                );
+                if (attempt == 0) {
+                    WaitForAutoSave(token, changedAt, 1);
+                    return;
+                }
+
+                log.Info("No fresh autosave found at the end of the cycle, syncing a fresh save");
+                RunSync(null);
             }),
             TaskScheduler.Default
         );
     }
 
-    private void OnAutoSaved(string path) {
-        if (!syncPending)
-            return;
-
-        syncPending = false;
-        // Not inside SaveLoader.Save: sync on the next tick
-        scheduler.Run(() => RunSync(path));
+    private static string? FindFreshAutoSave(float changedAt) {
+        var path = AutoSaveEvents.LastPath;
+        if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+            return null;
+        return AutoSaveEvents.LastTime >= changedAt - 5f ? path : null;
     }
 
     private void RunSync(string? savePath) {
@@ -126,6 +121,7 @@ public class HostEventsBinder {
             if (multiplayer.Players.Count < 2 || !multiplayer.Players.Ready)
                 return;
 
+            log.Info($"Periodic world sync: {(savePath != null ? "autosave " + savePath : "fresh save")}");
             worldManager.Sync(showOverlay: false, savePath);
         } catch (Exception e) {
             // A failed periodic sync must never crash or freeze the host's game
@@ -138,8 +134,7 @@ public class HostEventsBinder {
             return;
 
         GameClockEvents.CycleChanged -= OnCycleChanged;
-        AutoSaveEvents.AutoSaved -= OnAutoSaved;
-        syncPending = false;
+        pendingToken++;
         subscriptions.Cancel();
     }
 

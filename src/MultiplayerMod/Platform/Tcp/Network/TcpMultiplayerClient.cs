@@ -21,6 +21,10 @@ public class TcpMultiplayerClient : IMultiplayerClient {
 
     public IMultiplayerClientId Id => TcpMultiplayerClientId.Local;
     public MultiplayerClientState State { get; private set; } = MultiplayerClientState.Disconnected;
+
+    /// <summary>True after an established connection to the host was lost (until the next connect).</summary>
+    public static bool ConnectionLost { get; private set; }
+
     public event Action<MultiplayerClientState>? StateChanged;
     public event Action<IMultiplayerCommand>? CommandReceived;
 
@@ -46,6 +50,7 @@ public class TcpMultiplayerClient : IMultiplayerClient {
         connectedSocket = null;
         connectError = null;
         connectionWasLost = false;
+        ConnectionLost = false;
         droppedWarningShown = false;
         var attempt = Interlocked.Increment(ref connectAttempt);
         SetState(MultiplayerClientState.Connecting);
@@ -151,6 +156,7 @@ public class TcpMultiplayerClient : IMultiplayerClient {
         if (connection.Closed) {
             log.Warning("Connection to the host was lost");
             connectionWasLost = true;
+            ConnectionLost = true;
             ReleaseResources();
             SetState(MultiplayerClientState.Disconnected);
         }

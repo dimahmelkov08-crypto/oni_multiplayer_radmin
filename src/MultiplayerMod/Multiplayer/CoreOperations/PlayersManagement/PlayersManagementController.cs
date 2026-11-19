@@ -116,6 +116,7 @@ public class PlayersManagementController {
         identities[@event.ClientId] = player.Id;
 
         server.Send(@event.ClientId, new SyncPlayersCommand(multiplayer.Players.ToArray()));
+        server.Send(@event.ClientId, new MultiplayerMod.Multiplayer.Commands.Ping.HostHello());
         server.Clients.ForEach(it => server.Send(it, new AddPlayerCommand(player, it.Equals(@event.ClientId))));
 
         log.Debug($"Client {@event.ClientId} initialized {{ Role = {role}, Id = {player.Id} }}");
