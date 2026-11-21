@@ -122,7 +122,7 @@ public class HostEventsBinder {
                 return;
 
             log.Info($"Periodic world sync: {(savePath != null ? "autosave " + savePath : "fresh save")}");
-            worldManager.Sync(showOverlay: false, savePath);
+            worldManager.Sync(showOverlay: true, savePath);
         } catch (Exception e) {
             // A failed periodic sync must never crash or freeze the host's game
             log.Error($"Periodic world sync failed: {e}");
